@@ -53,7 +53,7 @@ That is a core design choice, not an implementation detail.
 
 - **Named remote** - `origin` is never hijacked. You push to `no-mistakes` on purpose, so regular `git push` still works normally.
 - **Disposable worktrees** - each run happens in its own detached worktree under `~/.no-mistakes/worktrees/`. The daemon can safely modify files, run tests, and commit fixes without touching your working directory.
-- **Fixed pipeline** - the step order is opinionated and not configurable: `rebase → review → test → document → lint → push → pr → ci`. What you _can_ configure is the commands each step runs and how many auto-fix attempts are allowed.
+- **Fixed pipeline** - the step order is opinionated and not configurable: `rebase → review → test → document → lint → push → pr → ci`. What you _can_ configure is the commands each step runs, how many auto-fix attempts are allowed, and whether transcript-based intent extraction is used.
 
 ## Why it is built this way
 
@@ -133,14 +133,17 @@ Communication between the CLI and daemon uses JSON-RPC 2.0 over the Unix socket.
 
 ### Database
 
-SQLite at `~/.no-mistakes/state.sqlite` tracks repos, runs, step results, and
-step rounds. Step rounds record each execution attempt (initial, auto-fix) with
-its own findings and duration, plus selected finding IDs, whether the
-selection came from the user or auto-fix filtering, the merged finding payload
-actually sent to the fix agent for that round, and the one-line fix summary
-for fix rounds. That merged payload can include per-finding user notes and
-user-authored findings from the TUI. Legacy `user_fix` rounds are still read
-as `auto-fix` for backward compatibility.
+SQLite at `~/.no-mistakes/state.sqlite` tracks repos, runs, step results, step
+rounds, and derived intent summaries. Step rounds record each execution attempt
+(initial, auto-fix) with its own findings and duration, plus selected finding
+IDs, whether the selection came from the user or auto-fix filtering, the merged
+finding payload actually sent to the fix agent for that round, and the one-line
+fix summary for fix rounds. That merged payload can include per-finding user
+notes and user-authored findings from the TUI. Intent extraction stores the
+summary, source, session ID, and match score on each run, plus cached summaries
+for matching transcript sessions. Raw transcript text is not stored in this
+database. Legacy `user_fix` rounds are still read as `auto-fix` for backward
+compatibility.
 
 ## Local state
 
